@@ -1,0 +1,17 @@
+filebeat.inputs:
+- type: filestream
+  id: my-logs-id
+  enabled: true
+  # Tentukan jalur ke folder log yang di-mount (misalnya di host)
+  paths:
+    - /path/to/host/logs/*.log
+  fields:
+    # Field kustom untuk identifikasi service
+    service: "library-system"
+  processors:
+    - add_host_metadata: ~
+    - add_kubernetes_metadata: ~ # Opsional, jika di deploy di Kubernetes
+
+output.logstash:
+  # Alamat IP Logstash
+  hosts: ["logstash-service:5044"] # Ganti dengan IP host atau nama container (jika di compose yang sama)

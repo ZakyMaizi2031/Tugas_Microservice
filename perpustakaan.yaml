@@ -1,0 +1,315 @@
+# ==============================================================================
+# 0. NAMESPACE & KONFIGURASI UMUM
+# ==============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: perpustakaan-ns
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: perpustakaan-ns
+type: Opaque
+stringData:
+  SECRET_KEY: "ThisIsASecretKeyForTesting"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: perpustakaan-ns
+data:
+  EUREKA_SERVER_URL: "http://eureka-server-service:8761/eureka/"
+
+# ==============================================================================
+# 1. EUREKA SERVER (Port: 8761)
+# ==============================================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eureka-server-deployment
+  namespace: perpustakaan-ns
+  labels:
+    app: eureka-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eureka-server
+  template:
+    metadata:
+      labels:
+        app: eureka-server
+    spec:
+      containers:
+      - name: eureka-server
+        image: steeltoeoss/eureka-server
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8761
+        env:
+        - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
+          value: "false"
+        - name: EUREKA_CLIENT_FETCH_REGISTRY
+          value: "false"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eureka-server-service
+  namespace: perpustakaan-ns
+spec:
+  ports:
+  - port: 8761
+    targetPort: 8761
+  selector:
+    app: eureka-server
+  type: ClusterIP
+
+# ==============================================================================
+# 2. API GATEWAY (Port: 9091)
+# ==============================================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway-deployment
+  namespace: perpustakaan-ns
+  labels:
+    app: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: microservice1-api_gateway:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 9091
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: API-GATEWAY
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: EUREKA_SERVER_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-service
+  namespace: perpustakaan-ns
+spec:
+  ports:
+  - port: 9091
+    targetPort: 9091
+    nodePort: 30091
+  selector:
+    app: api-gateway
+  type: NodePort
+
+# ==============================================================================
+# 3. SERVICE BUKU (Port: 8081)
+# ==============================================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buku-deployment
+  namespace: perpustakaan-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: service-buku
+  template:
+    metadata:
+      labels:
+        app: service-buku
+    spec:
+      containers:
+      - name: buku-service
+        image: microservice1-buku:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: BUKU
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: EUREKA_SERVER_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: buku-service
+  namespace: perpustakaan-ns
+spec:
+  ports:
+  - port: 8081
+    targetPort: 8081
+  selector:
+    app: service-buku
+  type: ClusterIP
+
+# ==============================================================================
+# 4. SERVICE ANGGOTA (Port: 8082)
+# ==============================================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anggota-deployment
+  namespace: perpustakaan-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-anggota
+  template:
+    metadata:
+      labels:
+        app: service-anggota
+    spec:
+      containers:
+      - name: anggota-service
+        image: microservice1-anggota:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8082
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: ANGGOTA
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: EUREKA_SERVER_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: anggota-service
+  namespace: perpustakaan-ns
+spec:
+  ports:
+  - port: 8082
+    targetPort: 8082
+  selector:
+    app: service-anggota
+  type: ClusterIP
+
+# ==============================================================================
+# 5. SERVICE PEMINJAMAN (Port: 8083)
+# ==============================================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: peminjaman-deployment
+  namespace: perpustakaan-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-peminjaman
+  template:
+    metadata:
+      labels:
+        app: service-peminjaman
+    spec:
+      containers:
+      - name: peminjaman-service
+        image: microservice1-peminjaman:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8083
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: PEMINJAMAN
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: EUREKA_SERVER_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: peminjaman-service
+  namespace: perpustakaan-ns
+spec:
+  ports:
+  - port: 8083
+    targetPort: 8083
+  selector:
+    app: service-peminjaman
+  type: ClusterIP
+
+# ==============================================================================
+# 6. SERVICE PENGEMBALIAN (Port: 8084)
+# ==============================================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pengembalian-deployment
+  namespace: perpustakaan-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-pengembalian
+  template:
+    metadata:
+      labels:
+        app: service-pengembalian
+    spec:
+      containers:
+      - name: pengembalian-service
+        image: microservice1-pengembalian-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8084
+        env:
+        - name: SPRING_APPLICATION_NAME
+          value: PENGEMBALIAN
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: EUREKA_SERVER_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pengembalian-service
+  namespace: perpustakaan-ns
+spec:
+  ports:
+  - port: 8084
+    targetPort: 8084
+  selector:
+    app: service-pengembalian
+  type: ClusterIP

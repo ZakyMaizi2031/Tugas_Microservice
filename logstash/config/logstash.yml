@@ -1,0 +1,45 @@
+# -----------------------------------
+# Core Settings
+# -----------------------------------
+
+# Nama unik untuk Logstash instance ini
+# Gunakan nama container atau nama Pod jika diperlukan untuk identifikasi.
+node.name: logstash-01
+
+# Jalur tempat Logstash mencari file konfigurasi pipeline (.conf)
+# Ini harus sinkron dengan volume mount Anda: /usr/share/logstash/pipeline
+path.settings: /usr/share/logstash/config
+path.logs: /usr/share/logstash/logs
+
+# -----------------------------------
+# Pipeline Settings
+# -----------------------------------
+
+# Jalur tempat Logstash mencari file konfigurasi pipeline (logstash.conf)
+path.config: /usr/share/logstash/pipeline
+
+# Berapa banyak worker threads yang digunakan untuk memproses events (setiap pipeline)
+# Disarankan sama dengan jumlah core CPU, atau biarkan default (1)
+pipeline.workers: 2 
+
+# Jumlah events maksimum yang dapat disimpan di memory queue per worker
+# Default: 125. Naikkan jika Anda memiliki throughput yang tinggi.
+pipeline.batch.size: 125 
+
+# Timeout (dalam ms) sebelum worker memproses batch events yang tidak penuh
+# Default: 50ms.
+pipeline.batch.delay: 50
+
+# -----------------------------------
+# Monitoring dan Debugging
+# -----------------------------------
+
+# Mengaktifkan Web API untuk memantau status Logstash.
+# Jika diatur ke true, pastikan port 9600 terekspos jika Anda perlu memantaunya.
+http.host: "0.0.0.0"
+http.port: 9600
+
+# Mengaktifkan fitur reload otomatis jika file konfigurasi berubah.
+# Biasanya dinonaktifkan di lingkungan produksi Kubernetes.
+config.reload.automatic: false
+# config.reload.interval: 3s

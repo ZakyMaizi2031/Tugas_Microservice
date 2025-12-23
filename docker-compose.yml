@@ -1,0 +1,246 @@
+# version: '3.7'
+
+services:
+  # 1. Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10 # Pilih versi yang stabil
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false # Nonaktifkan security untuk setup sederhana
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  # 2. Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.10
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  # 3. Logstash (Menerima dari Filebeat, memproses, mengirim ke Elasticsearch)
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.10
+    container_name: logstash
+    ports:
+      - "5044:5044" # Port default Filebeat input
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash/pipeline:/usr/share/logstash/pipeline/
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+volumes:
+  esdata:
+    driver: local
+
+
+# #version: '3.8'
+
+# services:
+#   # Service Discovery - Eureka Server
+#   eureka-server:
+#     image: steeltoeoss/eureka-server
+#     container_name: eureka-server
+#     ports:
+#       - "8761:8761"
+#     environment:
+#       # PENTING: Eureka Server harus mengabaikan pendaftaran diri sendiri,
+#       # Pastikan konfigurasi ini ada di file properties/yml Eureka Server
+#       EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false" 
+#       EUREKA_CLIENT_FETCH_REGISTRY: "false"
+#       JAVA_OPTS: "-Xmx256m -Xss512k"
+#     networks:
+#       - microservices-network
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8761"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+
+#   # Message Broker - RabbitMQ (Tidak ada perubahan signifikan)
+#   rabbitmq:
+#     image: rabbitmq:3-management-alpine
+#     container_name: rabbitmq
+#     ports:
+#       - "5672:5672" 
+#       - "15672:15672"
+#     environment:
+#       RABBITMQ_DEFAULT_USER: admin
+#       RABBITMQ_DEFAULT_PASS: password
+#     networks:
+#       - microservices-network
+#     healthcheck:
+#       test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+
+#   # Service buku dengan H2 Database
+#   buku: # Service ID: buku
+#     build: ./buku
+#     container_name: buku
+#     # ports:
+#     #   - "8081:8081"
+#     environment:
+#       SPRING_PROFILES_ACTIVE: docker
+#       # Perbaikan 1: Pastikan hostname EUREKA CLIENT benar
+#       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+#       # Perbaikan 2: Tentukan nama aplikasi agar Service ID konsisten (lowercase)
+#       SPRING_APPLICATION_NAME: buku 
+      
+#       # ... (konfigurasi RabbitMQ dan Database lainnya)
+      
+#       SERVER_PORT: 8081
+#     volumes:
+#       - buku_data:/data
+#     depends_on:
+#       - eureka-server
+#       - rabbitmq
+#     networks:
+#       - microservices-network
+#     healthcheck:
+#       # Perbaikan 3: Ganti localhost ke nama service kontainer
+#       test: ["CMD", "curl", "-f", "http://buku:8081/actuator/health"] 
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+
+#   # Service anggota dengan H2 Database
+#   anggota: # Service ID: anggota
+#     build: ./anggota
+#     container_name: anggota
+#     # ports:
+#     #   - "8082:8082"
+#     environment:
+#       SPRING_PROFILES_ACTIVE: docker
+#       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+#       SPRING_APPLICATION_NAME: anggota # Tentukan nama aplikasi konsisten
+
+#       # ... (konfigurasi RabbitMQ dan Database lainnya)
+
+#       SERVER_PORT: 8082
+#     volumes:
+#       - anggota_data:/data
+#     depends_on:
+#       - eureka-server
+#       - rabbitmq
+#     networks:
+#       - microservices-network
+#     healthcheck:
+#       # Perbaikan 3: Ganti localhost ke nama service kontainer
+#       test: ["CMD", "curl", "-f", "http://anggota:8082/actuator/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+
+#   # Service peminjaman dengan H2 Database
+#   peminjaman: # Service ID: peminjaman
+#     build: ./peminjaman
+#     container_name: peminjaman
+#     # ports:
+#     #   - "8083:8083"
+#     environment:
+#       SPRING_PROFILES_ACTIVE: docker
+#       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+#       SPRING_APPLICATION_NAME: peminjaman # Tentukan nama aplikasi konsisten
+      
+#       # ... (konfigurasi RabbitMQ dan Database lainnya)
+
+#       # Perbaikan 4: Service URL tidak perlu didefinisikan di environment jika menggunakan Eureka
+#       # buku_SERVICE_URL: http://buku:8081
+#       # anggota_SERVICE_URL: http://anggota:8082
+      
+#       SERVER_PORT: 8083
+#     volumes:
+#       - peminjaman_data:/data
+#     depends_on:
+#       - eureka-server
+#       - rabbitmq
+#       - buku
+#       - anggota
+#     networks:
+#       - microservices-network
+#     healthcheck:
+#       # Perbaikan 3: Ganti localhost ke nama service kontainer
+#       test: ["CMD", "curl", "-f", "http://peminjaman:8083/actuator/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+
+#   # Service pengembalian dengan H2 Database
+#   pengembalian-service: # Service ID: pengembalian-service
+#     build: ./pengembalian_service
+#     container_name: pengembalian_service
+#     # ports:
+#     #   - "8084:8084"
+#     environment:
+#       SPRING_PROFILES_ACTIVE: docker
+#       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+#       SPRING_APPLICATION_NAME: pengembalian-service # Tentukan nama aplikasi konsisten
+      
+#       # ... (konfigurasi RabbitMQ dan Database lainnya)
+
+#       # Perbaikan 4: Service URL tidak perlu didefinisikan di environment jika menggunakan Eureka
+#       # buku_SERVICE_URL: http://buku:8081
+#       # anggota_SERVICE_URL: http://anggota:8082
+#       # PEMINJAMAN_SERVICE_URL: http://peminjaman:8083
+      
+#       SERVER_PORT: 8084
+#     # Perbaikan 5: Volume harus menunjuk ke pengembalian_data
+#     volumes:
+#       - pengembalian_data:/data
+#     depends_on:
+#       - eureka-server
+#       - rabbitmq
+#       - buku
+#       - anggota
+#       - peminjaman
+#     networks:
+#       - microservices-network
+#     healthcheck:
+#       # Perbaikan 3: Ganti localhost ke nama service kontainer
+#       test: ["CMD", "curl", "-f", "http://pengembalian-service:8084/actuator/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+
+#   # API Gateway (Opsional)
+#   api_gateway: # Service ID: api_gateway
+#     build: ./api_gateway
+#     container_name: api_gateway
+#     ports:
+#       - "9091:9091"
+#     environment:
+#       SPRING_PROFILES_ACTIVE: docker
+#       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+#       SPRING_APPLICATION_NAME: API_GATEWAY # Tentukan nama aplikasi konsisten
+
+#       SERVER_PORT: 9091
+#     depends_on:
+#       - eureka-server
+#       - buku
+#       - anggota
+#       - peminjaman
+#       - pengembalian-service
+#     networks:
+#       - microservices-network
+
+# volumes:
+#   buku_data:
+#   anggota_data:
+#   peminjaman_data:
+#   pengembalian_data: # Pastikan ini didefinisikan dan digunakan di pengembalian-service
+
+# networks:
+#   microservices-network:
+#     driver: bridge

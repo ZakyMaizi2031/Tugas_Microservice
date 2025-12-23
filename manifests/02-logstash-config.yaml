@@ -1,0 +1,32 @@
+# ConfigMap untuk Konfigurasi Pipeline Logstash
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  namespace: perpustakaan-ns
+data:
+  logstash.conf: |
+    input {
+      # Menerima log dari Filebeat
+      beats {
+        port => 5044
+      }
+    }
+    filter {
+      # Asumsi Pattern Log Spring Boot mencakup service name (ex: 2025-11-26 10:00:00.000 INFO [thread] BUKU : pesan)
+      grok {
+        match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:level} +\[%{NOTSPACE:thread}] +**%{NOTSPACE:service_name}** : %{GREEDYDATA:log_message}" }
+        # Pastikan Anda mengkustomisasi logback service Anda untuk mencetak service name
+      }
+      # Tambahkan metadata Kubernetes jika hilang saat parsing
+      mutate {
+        rename => { "[fields][service]" => "filebeat_service" }
+      }
+    }
+    output {
+      # Mengirim ke Elasticsearch Service di Namespace yang sama
+      elasticsearch {
+        hosts => ["http://elasticsearch-service:9200"]
+        index => "perpustakaan-logs-%{+YYYY.MM.dd}"
+      }
+    }
