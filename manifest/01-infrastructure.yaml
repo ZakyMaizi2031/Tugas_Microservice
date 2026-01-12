@@ -1,0 +1,122 @@
+# ==========================================================
+# MYSQL (COMMAND SIDE)
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-db
+  namespace: perpustakaan-ns
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: perpus-secrets
+              key: mysql-root-password
+        ports:
+        - containerPort: 3306
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: perpustakaan-ns
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: mysql
+---
+# ==========================================================
+# MONGODB (QUERY SIDE)
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  namespace: perpustakaan-ns
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:latest
+        ports:
+        - containerPort: 27017
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  namespace: perpustakaan-ns
+spec:
+  ports:
+  - port: 27017
+  selector:
+    app: mongodb
+---
+# ==========================================================
+# RABBITMQ (SYNC ENGINE)
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: perpustakaan-ns
+spec:
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: perpus-secrets
+              key: rabbitmq-user
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: perpus-secrets
+              key: rabbitmq-pass
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service
+  namespace: perpustakaan-ns
+spec:
+  ports:
+  - name: server
+    port: 5672
+  - name: management
+    port: 15672
+  selector:
+    app: rabbitmq

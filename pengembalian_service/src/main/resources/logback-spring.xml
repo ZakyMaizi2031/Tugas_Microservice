@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Mengambil nama aplikasi dari application.properties/yml -->
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="unknown-service"/>
+
+    <!-- 1. Appender untuk Console (Terminal VS Code / kubectl logs) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- Format log di terminal agar mudah dibaca manusia -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} | %highlight(%-5level) | %cyan(${appName}) | %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 2. Appender untuk Logstash (Dikirim ke Docker Compose ELK) -->
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <!-- Tujuan pengiriman log (host.docker.internal untuk memanggil Docker Compose dari K8s) -->
+        <destination>${LOGSTASH_DESTINATION:-host.docker.internal:5000}</destination>
+        
+        <!-- Encoder JSON agar Logstash/Elasticsearch bisa membagi log menjadi kolom-kolom -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app_name":"${appName}"}</customFields>
+        </encoder>
+
+        <!-- Reconnection delay jika Logstash mati mendadak -->
+        <reconnectionDelay>5 second</reconnectionDelay>
+    </appender>
+
+    <!-- Konfigurasi Level Log -->
+    <!-- Root level WARN agar log sistem tidak terlalu berisik -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="LOGSTASH" />
+    </root>
+
+    <!-- Khusus log dari kodingan Anda (package com.dika) diset ke INFO -->
+    <logger name="com.dika" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="LOGSTASH" />
+    </logger>
+
+</configuration>

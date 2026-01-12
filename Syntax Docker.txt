@@ -1,0 +1,63 @@
+docker build -t perpus/eureka-server:1.0 ./eureka-server
+docker build -t perpus/api-gateway:1.0 ./api_gateway
+docker build -t perpus/buku-service:1.0 ./buku
+docker build -t perpus/anggota-service:1.0 ./anggota
+docker build -t perpus/peminjaman-service:1.0 ./peminjaman
+docker build -t perpus/pengembalian-service:1.0 ./pengembalian_service
+
+mvn clean package -DskipTests
+
+
+mongo db pass : admin / 12345678
+
+rabbit : dika / dika123
+
+mysql : root / pasword
+
+kubectl port-forward svc/eureka-service 8761:8761 -n perpustakaan-ns
+
+kubectl port-forward svc/rabbitmq-service 15672:15672 -n perpustakaan-ns
+
+kubectl port-forward svc/mysql-service 3306:3306 -n perpustakaan-ns
+akses : localhost:32000
+
+kubectl port-forward svc/mongodb-service 27017:27017 -n perpustakaan-ns
+
+kubectl port-forward svc/mongo-express-service 8085:8085 -n perpustakaan-ns
+
+kubectl apply -f 00-namespace.yaml
+kubectl apply -f 01-infrastructure.yaml
+kubectl apply -f 02-eureka.yaml
+kubectl apply -f 03-apps.yaml
+kubectl apply -f 04-gateway.yaml
+kubectl apply -f 05-phpmyadmin.yaml
+kubectl apply -f 06-secrets.yaml
+kubectl apply -f 07-mongo-express.yaml
+kubectl apply -f 08-logging-stack.yaml
+kubectl apply -f 09-monitoring-stack.yaml
+
+kubectl delete -f 00-namespace.yaml
+kubectl delete -f 01-infrastructure.yaml
+kubectl delete -f 02-eureka.yaml
+kubectl delete -f 03-apps.yaml
+kubectl delete -f 04-gateway.yaml
+kubectl delete -f 05-phpmyadmin.yaml
+kubectl delete -f 06-secrets.yaml
+kubectl delete -f 07-mongo-express.yaml
+kubectl delete -f 08-logging-stack.yaml
+kubectl delete -f 09-monitoring-stack.yaml
+
+
+
+akses Kibana:
+localhost:5601
+
+grafana:
+akses Kibana:
+localhost:3000
+
+localhost:30081/actuator/prometheus
+
+
+Url API:
+localhost:30000

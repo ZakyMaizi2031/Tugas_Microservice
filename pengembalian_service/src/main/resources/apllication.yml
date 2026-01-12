@@ -1,0 +1,21 @@
+spring:
+  application:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: thefruss032@gmail.com
+    password: dixvfwdefnujufmy
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: smtp.gmail.com
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/ # Alamat server Eureka

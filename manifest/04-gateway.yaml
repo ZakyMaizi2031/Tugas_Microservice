@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-app
+  namespace: perpustakaan-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+      - name: gateway
+        image: perpus/api-gateway:1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9091
+        env:
+        - name: LOGSTASH_DESTINATION
+          value: "host.docker.internal:5000"
+        - name: SPRING_APPLICATION_JSON
+          value: >
+            {
+              "server": {"port": 9091},
+              "spring": {
+                "application": {"name": "API-GATEWAY"},
+                "cloud": {
+                  "gateway": {
+                    "server": {
+                      "webmvc": {
+                        "routes": [
+                          { "id": "BUKU", "uri": "lb://BUKU", "predicates": ["Path=/api/buku/**"] },
+                          { "id": "ANGGOTA", "uri": "lb://ANGGOTA", "predicates": ["Path=/api/anggota/**"] },
+                          { "id": "PEMINJAMAN", "uri": "lb://PEMINJAMAN", "predicates": ["Path=/api/peminjaman/**"] },
+                          { "id": "PENGEMBALIAN", "uri": "lb://PENGEMBALIAN", "predicates": ["Path=/api/pengembalian/**"] }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "eureka": {
+                "client": {"service-url": {"defaultZone": "http://eureka-service:8761/eureka/"}},
+                "instance": {"prefer-ip-address": true}
+              },
+              "management": {
+                "endpoints": {"web": {"exposure": {"include": "prometheus,health,info"}}}
+              }
+            }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  namespace: perpustakaan-ns
+spec:
+  type: NodePort
+  ports:
+  - port: 9091
+    targetPort: 9091
+    nodePort: 30000
+  selector:
+    app: gateway

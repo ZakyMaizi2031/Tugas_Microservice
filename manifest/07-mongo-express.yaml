@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-express
+  namespace: perpustakaan-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-express
+  template:
+    metadata:
+      labels:
+        app: mongo-express
+    spec:
+      containers:
+      - name: mongo-express
+        image: mongo-express:latest
+        ports:
+        - containerPort: 8081
+        env:
+        # 1. Alamat server MongoDB (Sesuai nama Service di 01-infrastructure)
+        - name: ME_CONFIG_MONGODB_SERVER
+          value: "mongodb-service"
+        - name: ME_CONFIG_MONGODB_PORT
+          value: "27017"
+        
+        # 2. Login Dashboard Mongo-Express (Ini login untuk masuk ke webnya)
+        - name: ME_CONFIG_BASICAUTH_USERNAME
+          value: "admin"
+        - name: ME_CONFIG_BASICAUTH_PASSWORD
+          value: "12345678"
+
+        # 3. Matikan Admin Mode jika MongoDB tidak pakai password
+        - name: ME_CONFIG_MONGODB_ENABLE_ADMIN
+          value: "true"
+        - name: ME_CONFIG_MONGODB_AUTH_DATABASE
+          value: "admin"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-express-service
+  namespace: perpustakaan-ns
+spec:
+  type: NodePort
+  ports:
+  - port: 8081
+    targetPort: 8081
+    nodePort: 31000
+  selector:
+    app: mongo-express

@@ -1,0 +1,20 @@
+version: '3.7'
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    volumes:
+      # Sinkronisasi file konfigurasi datasource ke dalam Grafana
+      - ./provisioning:/etc/grafana/provisioning
+    networks:
+      - monitoring-network
+
+networks:
+  monitoring-network:
+    external: true
