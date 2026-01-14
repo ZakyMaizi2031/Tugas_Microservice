@@ -32,8 +32,8 @@
         <appender-ref ref="LOGSTASH" />
     </root>
 
-    <!-- Khusus log dari kodingan Anda (package com.dika) diset ke INFO -->
-    <logger name="com.dika" level="INFO" additivity="false">
+    <!-- Khusus log dari kodingan Anda (package com.zaky) diset ke INFO -->
+    <logger name="com.zaky" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE" />
         <appender-ref ref="LOGSTASH" />
     </logger>

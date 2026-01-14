@@ -1,41 +1,29 @@
 pipeline {
     agent any
-    
+    tools { maven 'Maven3'; jdk 'JDK22' }
     environment {
-        REGISTRY = "docker.io/thefruss032"       // Ganti username DockerHub
-        IMAGE_NAME = "pengembalian-service"        // Ganti per service
+        DOCKER_HUB_USER = "thefruss032"
+        IMAGE_NAME = "pengembalian-service"
+        REGISTRY_CREDS = "docker-hub-creds"
     }
-
     stages {
-        stage('Checkout Code') {
+        stage('CI/CD Process') {
             steps {
-                git branch: 'main', url: 'https://github.com/USERNAME/REPO.git'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh "docker build -t $REGISTRY/$IMAGE_NAME:latest ."
-            }
-        }
-
-        stage('Login DockerHub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh "echo $PASS | docker login -u $USER --password-stdin"
+                ws("F:/Jenkins/workspace/${IMAGE_NAME}") {
+                    checkout scm
+                    dir('pengembalian_service') {
+                        bat 'mvn clean package -DskipTests'
+                        script {
+                            bat "docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER} ."
+                            withCredentials([usernamePassword(credentialsId: REGISTRY_CREDS, passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                                bat "docker login -u %USER% -p %PASS%"
+                                bat "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                            }
+                        }
+                    }
+                    bat "kubectl set image deployment/pengembalian-app pengembalian=${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER} -n perpustakaan-ns"
+                    bat "kubectl rollout status deployment/pengembalian-app -n perpustakaan-ns"
                 }
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                sh "docker push $REGISTRY/$IMAGE_NAME:latest"
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh "kubectl apply -f manifests/"
             }
         }
     }

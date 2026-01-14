@@ -1,41 +1,38 @@
 pipeline {
     agent any
-    
+    tools { maven 'Maven3'; jdk 'JDK22' }
     environment {
-        REGISTRY = "docker.io/thefruss032"       // Ganti username DockerHub
-        IMAGE_NAME = "buku"        // Ganti per service
+        DOCKER_HUB_USER = "thefruss032"
+        IMAGE_NAME = "buku-service"
+        REGISTRY_CREDS = "docker-hub-creds"
     }
-
     stages {
-        stage('Checkout Code') {
+        stage('1. Setup Workspace & Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/USERNAME/REPO.git'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh "docker build -t $REGISTRY/$IMAGE_NAME:latest ."
-            }
-        }
-
-        stage('Login DockerHub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh "echo $PASS | docker login -u $USER --password-stdin"
+                ws("F:/Jenkins/workspace/${IMAGE_NAME}") {
+                    checkout scm
+                    echo "Workspace set to F:/Jenkins/workspace/${IMAGE_NAME}"
+                    
+                    dir('buku') {
+                        echo '2. Building JAR...'
+                        bat 'mvn clean package -DskipTests'
+                        
+                        echo '3. Building & Pushing Docker Image...'
+                        script {
+                            bat "docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER} ."
+                            
+                            withCredentials([usernamePassword(credentialsId: REGISTRY_CREDS, passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                                bat "docker login -u %USER% -p %PASS%"
+                                bat "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                                bat "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest"
+                            }
+                        }
+                    }
+                    
+                    echo '4. Deploying to Kubernetes...'
+                    bat "kubectl set image deployment/buku-app buku=${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER} -n perpustakaan-ns"
+                    bat "kubectl rollout status deployment/buku-app -n perpustakaan-ns"
                 }
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                sh "docker push $REGISTRY/$IMAGE_NAME:latest"
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh "kubectl apply -f manifests/"
             }
         }
     }

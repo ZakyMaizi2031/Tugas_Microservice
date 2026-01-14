@@ -1,0 +1,30 @@
+pipeline {
+    agent any
+    tools { maven 'Maven3'; jdk 'JDK22' }
+    environment {
+        DOCKER_HUB_USER = "thefruss032"
+        IMAGE_NAME = "api-gateway"
+        REGISTRY_CREDS = "docker-hub-creds"
+    }
+    stages {
+        stage('CI/CD Process') {
+            steps {
+                ws("F:/Jenkins/workspace/${IMAGE_NAME}") {
+                    checkout scm
+                    dir('api_gateway') {
+                        bat 'mvn clean package -DskipTests'
+                        script {
+                            bat "docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER} ."
+                            withCredentials([usernamePassword(credentialsId: REGISTRY_CREDS, passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                                bat "docker login -u %USER% -p %PASS%"
+                                bat "docker push ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
+                            }
+                        }
+                    }
+                    bat "kubectl set image deployment/gateway-app gateway=${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER} -n perpustakaan-ns"
+                    bat "kubectl rollout status deployment/gateway-app -n perpustakaan-ns"
+                }
+            }
+        }
+    }
+}
