@@ -1,7 +1,7 @@
-# Laporan UAS Arsitektur Berbasis Layanan
+# 📘 Laporan UAS Arsitektur Berbasis Layanan
 ## Implementasi Arsitektur Microservices Modern dengan CQRS Hybrid, Event-Driven Architecture, dan Automated Deployment
 
-**Nama** : Muhammad Zaky Maizi 
+**Nama** : Muhammad Zaky Maizi  
 **Kelas** : TRPL 3D  
 **Mata Kuliah** : Arsitektur Berbasis Layanan  
 
