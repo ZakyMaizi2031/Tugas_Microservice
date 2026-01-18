@@ -2,14 +2,14 @@ pipeline {
     agent any
     tools { maven 'Maven3'; jdk 'JDK22' }
     environment {
-        DOCKER_HUB_USER = "thefruss032"
+        DOCKER_HUB_USER = "mzakymaizi"
         IMAGE_NAME = "buku-service"
         REGISTRY_CREDS = "docker-hub-creds"
     }
     stages {
         stage('1. Setup Workspace & Checkout') {
             steps {
-                ws("F:/Jenkins/workspace/${IMAGE_NAME}") {
+                ws("D:/jenkins/workspace/${IMAGE_NAME}") {
                     checkout scm
                     echo "Workspace set to F:/Jenkins/workspace/${IMAGE_NAME}"
                     
@@ -20,6 +20,7 @@ pipeline {
                         echo '3. Building & Pushing Docker Image...'
                         script {
                             bat "docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.BUILD_NUMBER} ."
+                            bat "docker build -t ${DOCKER_HUB_USER}/${IMAGE_NAME}:latest ."
                             
                             withCredentials([usernamePassword(credentialsId: REGISTRY_CREDS, passwordVariable: 'PASS', usernameVariable: 'USER')]) {
                                 bat "docker login -u %USER% -p %PASS%"

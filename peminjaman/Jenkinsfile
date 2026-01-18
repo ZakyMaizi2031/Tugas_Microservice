@@ -2,14 +2,14 @@ pipeline {
     agent any
     tools { maven 'Maven3'; jdk 'JDK22' }
     environment {
-        DOCKER_HUB_USER = "thefruss032"
+        DOCKER_HUB_USER = "mzakymaizi"
         IMAGE_NAME = "peminjaman-service"
         REGISTRY_CREDS = "docker-hub-creds"
     }
     stages {
         stage('CI/CD Process') {
             steps {
-                ws("F:/Jenkins/workspace/${IMAGE_NAME}") {
+                ws("D:/jenkins/workspace/${IMAGE_NAME}") {
                     checkout scm
                     dir('peminjaman') {
                         bat 'mvn clean package -DskipTests'
