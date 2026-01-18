@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    tools { maven 'Maven3'; jdk 'JDK22' }
+    tools { maven 'Maven3'; jdk 'JDK21' }
     environment {
         DOCKER_HUB_USER = "mzakymaizi"
         IMAGE_NAME = "peminjaman-service"

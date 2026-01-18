@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    tools { maven 'Maven3'; jdk 'JDK22' }
+    tools { maven 'Maven3'; jdk 'JDK21' }
     environment {
         DOCKER_HUB_USER = "mzakymaizi"
         IMAGE_NAME = "buku-service"
@@ -11,8 +11,6 @@ pipeline {
             steps {
                 ws("D:/jenkins/workspace/${IMAGE_NAME}") {
                     checkout scm
-                    echo "Workspace set to F:/Jenkins/workspace/${IMAGE_NAME}"
-                    
                     dir('buku') {
                         echo '2. Building JAR...'
                         bat 'mvn clean package -DskipTests'
